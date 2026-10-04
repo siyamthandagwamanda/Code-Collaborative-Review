@@ -3,6 +3,7 @@ import { Review, ReviewDecision, ReviewWithReviewer } from "../models/review.mod
 import { UserRole } from "../models/user.modal";
 import { HttpError } from "../utils/http-error";
 import { findSubmission, getProjectAccess, getSubmission } from "./submission.service";
+import { notify } from "./notification.service";
 
 const COLUMNS = "id, submission_id, reviewer_id, status, comment, created_at";
 
@@ -32,11 +33,17 @@ export async function reviewSubmission( submissionId: number, userId: number, ro
 
     await pool.query("UPDATE submissions SET status = $1 WHERE id = $2", [decision, submissionId]);
 
+    const verdict = decision === "approved" ? "was approved" : "needs changes";
+    await notify(
+        [submission.submitter_id],
+        `Your submission #${submissionId} "${submission.title}" ${verdict}`
+    );
+
     return result.rows[0];
 }
 
 export async function getReviews( submissionId: number, userId: number ): Promise<ReviewWithReviewer[]> {
-    await getSubmission(submissionId, userId); 
+    await getSubmission(submissionId, userId);
 
     const result = await pool.query<ReviewWithReviewer>(
         `SELECT r.id, r.submission_id, r.reviewer_id, r.status, r.comment, r.created_at,

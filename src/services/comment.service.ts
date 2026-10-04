@@ -3,6 +3,7 @@ import { Comment, CommentWithAuthor } from "../models/comment.model";
 import { UserRole } from "../models/user.modal";
 import { HttpError } from "../utils/http-error";
 import { findSubmission, getProjectAccess, getSubmission } from "./submission.service";
+import { notify } from "./notification.service";
 
 const COLUMNS = "id, submission_id, author_id, line_number, body, created_at";
 
@@ -25,7 +26,6 @@ export async function addComment( submissionId: number, userId: number, role: Us
 
     const submission = await findSubmission(submissionId);
     const { isOwner, isMember } = await getProjectAccess(submission.project_id, userId);
-
     if (!isOwner && !isMember) {
         throw new HttpError(403, "You are not a reviewer on this project");
     }
@@ -36,7 +36,17 @@ export async function addComment( submissionId: number, userId: number, role: Us
         RETURNING ${COLUMNS}`,
         [submissionId, userId, lineNumber, body]
     );
-    return result.rows[0];
+
+    const comment = result.rows[0];
+
+    if (submission.submitter_id !== userId) {
+        await notify(
+            [submission.submitter_id],
+            `New comment on submission #${submissionId}: "${submission.title}"`
+        );
+    }
+
+    return comment;
 }
 
 export async function getComments( submissionId: number, userId: number ): Promise<CommentWithAuthor[]> {

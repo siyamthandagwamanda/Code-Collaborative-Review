@@ -2,6 +2,7 @@ import { pool } from "../db/db";
 import { Submission, SubmissionStatus, submission_statuses } from "../models/submission.model";
 import { UserRole } from "../models/user.modal";
 import { HttpError } from "../utils/http-error";
+import { notifyProjectTeam } from "./notification.service";
 
 const COLUMNS = "id, project_id, submitter_id, title, code, status, created_at";
 
@@ -51,7 +52,16 @@ export async function createSubmission( projectId: number, userId: number, role:
         RETURNING ${COLUMNS}`,
         [projectId, userId, title, code]
     );
-    return result.rows[0];
+
+    const submission = result.rows[0];
+
+    await notifyProjectTeam(
+        projectId,
+        userId,
+        `New submission #${submission.id}: "${title}"`
+    );
+
+    return submission;
 }
 
 export async function getSubmissionsByProject( projectId: number, userId: number ): Promise<Submission[]> {
@@ -112,7 +122,8 @@ export async function deleteSubmission(id: number, userId: number): Promise<void
         throw new HttpError(403, "Only the submitter or project owner can delete this");
     }
 
-    
+   
+    await pool.query("DELETE FROM reviews WHERE submission_id = $1", [id]);
     await pool.query("DELETE FROM comments WHERE submission_id = $1", [id]);
     await pool.query("DELETE FROM submissions WHERE id = $1", [id]);
 }
