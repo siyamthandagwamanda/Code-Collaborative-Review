@@ -5,7 +5,7 @@ import { HttpError } from "../utils/http-error";
 
 const COLUMNS = "id, project_id, submitter_id, title, code, status, created_at";
 
-async function getProjectAccess(projectId: number, userId: number) {
+export async function getProjectAccess(projectId: number, userId: number) {
     const projectResult = await pool.query<{ owner_id: number }>(
         "SELECT owner_id FROM projects WHERE id = $1",
         [projectId]
@@ -26,7 +26,7 @@ async function getProjectAccess(projectId: number, userId: number) {
     };
 }
 
-async function findSubmission(id: number): Promise<Submission> {
+export async function findSubmission(id: number): Promise<Submission> {
     const result = await pool.query<Submission>(
         `SELECT ${COLUMNS} FROM submissions WHERE id = $1`,
         [id]
