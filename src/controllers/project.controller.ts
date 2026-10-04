@@ -1,14 +1,8 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/auth.middleware";
 import * as projectService from "../services/project.service";
-import { HttpError } from "../utils/http-error";
+import { sendError } from "../utils/send-error";
 
-function sendError(res: Response, err: unknown, fallback: string) {
-    if (err instanceof HttpError) {
-        return res.status(err.status).json({ message: err.message });
-    }
-    res.status(500).json({ message: fallback });
-}
 
 export async function create(req: AuthRequest, res: Response) {
     try {
